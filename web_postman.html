@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="fa" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <title>Mini Postman - Ultimate</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; display: flex; height: 100vh; background-color: #1e1e1e; color: #cccccc; }
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #1e1e1e; }
+        
+        /* Sidebar */
+        .sidebar { width: 300px; background-color: #252526; border-right: 1px solid #333; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar h3 { margin: 0; color: #fff; font-size: 16px; }
+        .btn-new { background-color: #007acc; border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;}
+        .btn-new:hover { background-color: #005f9e; }
+        
+        .saved-list { list-style: none; padding: 10px; margin: 0; overflow-y: auto; flex-grow: 1; }
+        .saved-list li { padding: 10px; background: #2d2d2d; margin-bottom: 8px; cursor: pointer; border-radius: 4px; border-left: 3px solid transparent; transition: 0.2s;}
+        .saved-list li:hover { background: #3d3d3d; }
+        .saved-list li.active { background: #37373d; border-left-color: #007acc; }
+        .req-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .req-method { font-weight: bold; font-size: 12px; width: 50px;}
+        .method-get { color: #4CAF50; } .method-post { color: #FFC107; } .method-put { color: #2196F3; } .method-delete { color: #f44336; }
+        .req-name { color: #fff; font-weight: bold; font-size: 14px; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+        .req-url { font-size: 11px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 5px;}
+        .delete-btn { color: #f44336; cursor: pointer; font-size: 12px; float: right;}
+
+        /* Main Content */
+        .main { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* URL Bar */
+        .top-bar { padding: 15px; background-color: #1e1e1e; display: flex; gap: 10px; border-bottom: 1px solid #333; }
+        select, input, button { padding: 10px; border: 1px solid #444; border-radius: 4px; background-color: #2d2d2d; color: #fff; font-size: 14px; outline: none; }
+        select { width: 100px; font-weight: bold; }
+        input[type="text"] { flex-grow: 1; font-family: monospace; }
+        input:focus, textarea:focus { border-color: #007acc; }
+        .btn-send { background-color: #007acc; border-color: #007acc; width: 100px; font-weight: bold; cursor: pointer;}
+        .btn-save { background-color: #2ea043; border-color: #2ea043; width: 100px; font-weight: bold; cursor: pointer;}
+
+        /* Split Panels */
+        .panels { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
+        .panel { display: flex; flex-direction: column; flex: 1; overflow: hidden; border-bottom: 1px solid #333; }
+        
+        /* Tabs */
+        .tabs { display: flex; background: #252526; padding: 0 15px; border-bottom: 1px solid #333; }
+        .tab { padding: 10px 15px; cursor: pointer; color: #888; font-size: 13px; font-weight: bold; border-bottom: 2px solid transparent; }
+        .tab.active { color: #fff; border-bottom-color: #007acc; }
+        .tab-content { padding: 15px; overflow-y: auto; flex-grow: 1; display: none; background: #1e1e1e; }
+        .tab-content.active { display: block; }
+
+        /* Request Inputs */
+        textarea { width: 100%; height: 100%; background-color: #1e1e1e; color: #d4d4d4; border: 1px solid #444; border-radius: 4px; padding: 10px; font-family: monospace; resize: none; outline: none; }
+        .header-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .header-row input { flex: 1; }
+        .btn-remove-header { background: #f44336; border-color: #f44336; cursor: pointer; }
+        .btn-add-header { background: #444; border: none; cursor: pointer; margin-top: 5px; }
+
+        /* Response Panel */
+        .response-header-info { display: flex; gap: 20px; padding: 10px 15px; background: #252526; border-bottom: 1px solid #333; font-size: 13px; }
+        .status-badge { padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+        .status-200 { background: #4CAF50; color: #fff; }
+        .status-error { background: #f44336; color: #fff; }
+        .meta-info { color: #bbb; display: flex; align-items: center; }
+        .meta-value { color: #fff; font-weight: bold; margin-left: 5px; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>Workspaces</h3>
+            <button class="btn-new" onclick="createNewRequest()">+ New</button>
+        </div>
+        <ul class="saved-list" id="saved-list"></ul>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+        <!-- Top URL Bar -->
+        <div class="top-bar">
+            <select id="method">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+                <option value="PATCH">PATCH</option>
+            </select>
+            <input type="text" id="url" placeholder="Enter request URL (e.g., https://api.example.com/users)">
+            <button class="btn-send" onclick="sendRequest()">Send</button>
+            <button class="btn-save" onclick="saveRequest(true)">Save</button>
+        </div>
+
+        <div class="panels">
+            <!-- Top Panel: Request Data -->
+            <div class="panel">
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('req', 'body')">Body</div>
+                    <div class="tab" onclick="switchTab('req', 'auth')">Auth</div>
+                    <div class="tab" onclick="switchTab('req', 'headers')">Headers</div>
+                </div>
+                
+                <div id="req-body-tab" class="tab-content active">
+                    <textarea id="req-body" placeholder='{\n  "key": "value"\n}'></textarea>
+                </div>
+                
+                <div id="req-auth-tab" class="tab-content">
+                    <p style="margin-top:0;">Bearer Token:</p>
+                    <input type="text" id="token" placeholder="Enter token here..." style="width: 100%; max-width: 500px;">
+                </div>
+                
+                <div id="req-headers-tab" class="tab-content">
+                    <div id="headers-container"></div>
+                    <button class="btn-add-header" onclick="addHeaderRow()">+ Add Header</button>
+                </div>
+            </div>
+
+            <!-- Bottom Panel: Response -->
+            <div class="panel">
+                <div class="response-header-info">
+                    <div>Status: <span id="res-status" class="status-badge">-</span></div>
+                    <div class="meta-info">Time: <span id="res-time" class="meta-value">- ms</span></div>
+                </div>
+                <div class="tabs">
+                    <div class="tab active">Response Body</div>
+                </div>
+                <div class="tab-content active" style="padding: 0;">
+                    <textarea id="res-body" readonly placeholder="Response will appear here..." style="border:none; border-radius:0;"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRequestId = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSavedList();
+            addHeaderRow('Content-Type', 'application/json'); // Default header
+        });
+
+        // Tab Switching Logic
+        function switchTab(group, tabName) {
+            document.querySelectorAll(`[id^="${group}-"][id$="-tab"]`).forEach(el => el.classList.remove('active'));
+            document.querySelectorAll(`.panel:nth-child(${group === 'req' ? 1 : 2}) .tab`).forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`${group}-${tabName}-tab`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Custom Headers Logic
+        function addHeaderRow(key = '', value = '') {
+            const container = document.getElementById('headers-container');
+            const row = document.createElement('div');
+            row.className = 'header-row';
+            row.innerHTML = `
+                <input type="text" placeholder="Key (e.g. Content-Type)" value="${key}" class="hdr-key">
+                <input type="text" placeholder="Value (e.g. application/json)" value="${value}" class="hdr-val">
+                <button class="btn-remove-header" onclick="this.parentElement.remove()">X</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function getCustomHeaders() {
+            const headers = {};
+            document.querySelectorAll('.header-row').forEach(row => {
+                const key = row.querySelector('.hdr-key').value.trim();
+                const val = row.querySelector('.hdr-val').value.trim();
+                if (key) headers[key] = val;
+            });
+            return headers;
+        }
+
+        function loadCustomHeaders(headersObj) {
+            document.getElementById('headers-container').innerHTML = '';
+            if (headersObj && Object.keys(headersObj).length > 0) {
+                for (let key in headersObj) {
+                    addHeaderRow(key, headersObj[key]);
+                }
+            } else {
+                addHeaderRow('Content-Type', 'application/json');
+            }
+        }
+
+        // Core App Logic
+        function createNewRequest() {
+            currentRequestId = null;
+            document.getElementById('method').value = 'GET';
+            document.getElementById('url').value = '';
+            document.getElementById('token').value = '';
+            document.getElementById('req-body').value = '';
+            document.getElementById('res-body').value = '';
+            document.getElementById('res-status').textContent = '-';
+            document.getElementById('res-status').className = 'status-badge';
+            document.getElementById('res-time').textContent = '- ms';
+            loadCustomHeaders({});
+            
+            document.querySelectorAll('.saved-list li').forEach(li => li.classList.remove('active'));
+            switchTab('req', 'body');
+        }
+
+        async function sendRequest() {
+            const method = document.getElementById('method').value;
+            const url = document.getElementById('url').value;
+            const token = document.getElementById('token').value;
+            const bodyStr = document.getElementById('req-body').value;
+            
+            const resBodyEl = document.getElementById('res-body');
+            const resStatusEl = document.getElementById('res-status');
+            const resTimeEl = document.getElementById('res-time');
+
+            if (!url) { alert("Please enter a URL first."); return; }
+
+            resBodyEl.value = "Sending request...";
+            resStatusEl.textContent = "Loading...";
+            resStatusEl.className = 'status-badge';
+            resTimeEl.textContent = "- ms";
+
+            // Prepare Headers
+            const headers = getCustomHeaders();
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const options = { method, headers };
+
+            // Attach Body if applicable
+            if (method !== 'GET' && method !== 'HEAD' && bodyStr.trim() !== '') {
+                try {
+                    JSON.parse(bodyStr); // Validate JSON
+                    options.body = bodyStr;
+                } catch (e) {
+                    resBodyEl.value = "Error: Invalid JSON format in Request Body!";
+                    resStatusEl.textContent = "Error";
+                    resStatusEl.className = "status-badge status-error";
+                    return;
+                }
+            }
+
+            const startTime = performance.now();
+            let responseStatus = "";
+            let responseClass = "";
+            let responseData = "";
+
+            try {
+                const response = await fetch(url, options);
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+
+                // Update Status & Time
+                resTimeEl.textContent = `${duration} ms`;
+                responseStatus = `${response.status} ${response.statusText}`;
+                responseClass = response.ok ? 'status-200' : 'status-error';
+                resStatusEl.textContent = responseStatus;
+                resStatusEl.classList.add(responseClass);
+
+                // Process Response
+                const textData = await response.text();
+                try {
+                    // Try to format as JSON
+                    const jsonData = JSON.parse(textData);
+                    responseData = JSON.stringify(jsonData, null, 4);
+                } catch (e) {
+                    responseData = textData;
+                }
+                resBodyEl.value = responseData;
+
+            } catch (error) {
+                responseStatus = "Network Error";
+                responseClass = "status-error";
+                resStatusEl.textContent = responseStatus;
+                resStatusEl.classList.add(responseClass);
+                responseData = `Error: ${error.message}\n\nNote: If requesting a local server, ensure CORS is enabled.`;
+                resBodyEl.value = responseData;
+            }
+
+            // AUTO-SAVE after receiving response
+            saveRequest(false);
+        }
+
+        function saveRequest(isManualSave = true) {
+            const url = document.getElementById('url').value;
+            if (!url && isManualSave) { alert("Cannot save an empty request."); return; }
+            if (!url) return; // Don't auto-save completely empty unsent requests
+
+            let saved = JSON.parse(localStorage.getItem('postmanData') || '[]');
+            let reqName = "Untitled Request";
+
+            if (!currentRequestId) {
+                if (isManualSave) {
+                    reqName = prompt("Enter a name for this request:") || "Untitled";
+                } else {
+                    reqName = url.split('/').pop() || "New Request"; // Auto-generate name based on endpoint
+                }
+                currentRequestId = Date.now().toString();
+            } else {
+                const existing = saved.find(r => r.id === currentRequestId);
+                if (existing) reqName = existing.name;
+            }
+
+            const reqData = {
+                id: currentRequestId,
+                name: reqName,
+                method: document.getElementById('method').value,
+                url: url,
+                token: document.getElementById('token').value,
+                customHeaders: getCustomHeaders(),
+                reqBody: document.getElementById('req-body').value,
+                resBody: document.getElementById('res-body').value,
+                resStatus: document.getElementById('res-status').textContent,
+                resClass: document.getElementById('res-status').className,
+                resTime: document.getElementById('res-time').textContent
+            };
+
+            const index = saved.findIndex(r => r.id === currentRequestId);
+            if (index > -1) saved[index] = reqData;
+            else saved.push(reqData);
+
+            localStorage.setItem('postmanData', JSON.stringify(saved));
+            loadSavedList();
+        }
+
+        function loadSavedList() {
+            const listEl = document.getElementById('saved-list');
+            listEl.innerHTML = '';
+            const saved = JSON.parse(localStorage.getItem('postmanData') || '[]');
+
+            saved.forEach(req => {
+                const li = document.createElement('li');
+                if (req.id === currentRequestId) li.classList.add('active');
+                
+                const methodClass = `method-${req.method.toLowerCase()}`;
+                
+                li.innerHTML = `
+                    <div class="req-info">
+                        <span class="req-method ${methodClass}">${req.method}</span>
+                        <span class="req-name">${req.name}</span>
+                    </div>
+                    <div class="req-url">${req.url || 'No URL'}</div>
+                    <div><span class="delete-btn" onclick="deleteReq(event, '${req.id}')">Delete</span></div>
+                `;
+                
+                li.onclick = () => loadReqToView(req);
+                listEl.appendChild(li);
+            });
+        }
+
+        function loadReqToView(req) {
+            currentRequestId = req.id;
+            document.getElementById('method').value = req.method;
+            document.getElementById('url').value = req.url;
+            document.getElementById('token').value = req.token || '';
+            document.getElementById('req-body').value = req.reqBody || '';
+            document.getElementById('res-body').value = req.resBody || '';
+            
+            document.getElementById('res-status').textContent = req.resStatus || '-';
+            document.getElementById('res-status').className = req.resClass || 'status-badge';
+            document.getElementById('res-time').textContent = req.resTime || '- ms';
+            
+            loadCustomHeaders(req.customHeaders || {});
+            loadSavedList(); // Update active highlight
+        }
+
+        function deleteReq(event, id) {
+            event.stopPropagation();
+            if(!confirm("Delete this request?")) return;
+            
+            let saved = JSON.parse(localStorage.getItem('postmanData') || '[]');
+            saved = saved.filter(r => r.id !== id);
+            localStorage.setItem('postmanData', JSON.stringify(saved));
+            
+            if (currentRequestId === id) createNewRequest();
+            else loadSavedList();
+        }
+    </script>
+</body>
+</html>
